@@ -1,129 +1,143 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 
-<meta charset="utf-8">
-
+<meta charset="UTF-8">
 <title>Editor i-SIMP</title>
 
 <style>
 
 body{
 font-family:Segoe UI, Arial;
-background:#f4f6f8;
-margin:0;
+margin:40px;
+background:#f4f6f9;
+color:#333;
 }
 
-.header{
-background:linear-gradient(90deg,#0d47a1,#1976d2);
-color:white;
-padding:30px;
-text-align:center;
-}
-
-.header img{
-width:260px;
-margin-bottom:10px;
-}
-
-.header h1{
-margin:5px;
-font-size:28px;
-}
-
-.header p{
-margin:5px;
-font-size:15px;
-opacity:0.9;
-}
-
-.container{
-max-width:1200px;
-margin:auto;
-padding:30px;
-}
-
-.card{
-background:white;
-padding:20px;
-border-radius:8px;
-box-shadow:0 3px 12px rgba(0,0,0,0.08);
+h1{
 margin-bottom:20px;
+font-weight:600;
 }
 
 textarea{
 width:100%;
 height:120px;
-font-family:monospace;
-padding:10px;
-border-radius:6px;
+border-radius:8px;
 border:1px solid #ccc;
-}
-
-button{
-background:#1e88e5;
-color:white;
-border:none;
-padding:10px 20px;
-border-radius:6px;
-cursor:pointer;
-}
-
-button:hover{
-background:#1565c0;
+padding:10px;
+font-family:monospace;
 }
 
 table{
 width:100%;
 border-collapse:collapse;
-margin-top:15px;
+margin-top:20px;
+background:white;
+border-radius:8px;
+overflow:hidden;
+box-shadow:0 2px 6px rgba(0,0,0,0.05);
 }
 
 th{
-background:#1e88e5;
+background:#2f6db5;
 color:white;
-padding:8px;
-font-size:14px;
+padding:10px;
+text-align:left;
 }
 
 td{
-border:1px solid #e0e0e0;
-padding:6px;
-font-size:13px;
+padding:8px;
+border-bottom:1px solid #eee;
+}
+
+tr:nth-child(even){
+background:#f8f9fb;
 }
 
 input{
 width:100%;
-padding:4px;
-border-radius:4px;
-border:1px solid #bbb;
-font-family:monospace;
+padding:6px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+button{
+padding:6px 12px;
+background:#2f6db5;
+color:white;
+border:none;
+border-radius:6px;
+cursor:pointer;
+transition:0.2s;
+}
+
+button:hover{
+background:#1f4f8c;
+}
+
+.container{
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 2px 8px rgba(0,0,0,0.08);
+margin-bottom:20px;
+}
+
+.modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.35);
+display:none;
+align-items:center;
+justify-content:center;
+}
+
+.modal-content{
+background:white;
+padding:20px;
+border-radius:10px;
+max-height:520px;
+overflow:auto;
+width:750px;
+box-shadow:0 4px 20px rgba(0,0,0,0.2);
+}
+
+.modal-content table{
+box-shadow:none;
+}
+
+.modal-content table tr{
+cursor:pointer;
+}
+
+.modal-content table tr:hover{
+background:#eaf1ff;
+}
+
+.search-box{
+display:flex;
+gap:8px;
+margin-bottom:12px;
+}
+
+.search-box input{
+flex:1;
+}
+
+h3{
+margin-top:0;
+font-weight:600;
 }
 
 .result-box{
-background:#263238;
-color:#00e676;
-padding:15px;
-font-family:monospace;
-border-radius:6px;
-word-break:break-all;
-margin-top:10px;
+margin-top:20px;
 }
 
-.copy-btn{
-background:#43a047;
-margin-top:10px;
-}
-
-.copy-btn:hover{
-background:#2e7d32;
-}
-
-.counter{
-margin-top:8px;
-font-weight:bold;
-color:#444;
+.result-box textarea{
+height:80px;
 }
 
 </style>
@@ -132,26 +146,13 @@ color:#444;
 
 <body>
 
-<div class="header">
-
-<img src="{{ url_for('static', filename='logo.png') }}">
-
-<h1>Ferramenta de Análise i-SIMP</h1>
-
-<p>Decodificador, editor e validador de linhas do sistema ANP i-SIMP</p>
-
-</div>
-
+<h1>Editor i-SIMP</h1>
 
 <div class="container">
 
-<div class="card">
+<form method="POST">
 
-<h3>Inserir Linha i-SIMP</h3>
-
-<form method="post">
-
-<textarea name="linha" placeholder="Cole aqui a linha do i-SIMP">{{linha}}</textarea>
+<textarea name="linha">{{linha}}</textarea>
 
 <br><br>
 
@@ -164,11 +165,9 @@ color:#444;
 
 {% if resultado %}
 
-<div class="card">
+<div class="container">
 
-<h3>Campos da Linha</h3>
-
-<form method="post">
+<form method="POST">
 
 <table>
 
@@ -177,6 +176,7 @@ color:#444;
 <th>Posição</th>
 <th>Tamanho</th>
 <th>Valor Editável</th>
+<th>Detalhes</th>
 </tr>
 
 {% for item in resultado %}
@@ -190,12 +190,14 @@ color:#444;
 <td>{{item.tamanho}}</td>
 
 <td>
+<input type="text" name="campo{{loop.index0}}" value="{{item.valor}}">
+</td>
 
-<input
-type="text"
-name="campo{{loop.index0}}"
-value="{{item.valor}}"
-maxlength="{{item.tamanho}}">
+<td>
+
+<button type="button" onclick="verDetalhes('{{item.campo}}', {{loop.index0}})">
+Detalhes
+</button>
 
 </td>
 
@@ -216,48 +218,272 @@ maxlength="{{item.tamanho}}">
 {% endif %}
 
 
-
 {% if nova_linha %}
 
-<div class="card">
+<div class="container result-box">
 
-<h3>Nova Linha Gerada</h3>
+<h3>Nova linha gerada</h3>
 
-<div class="result-box" id="linhaFinal">
-
-{{nova_linha}}
-
-</div>
-
-<div class="counter">
-
-Tamanho da linha: <span id="contador">{{nova_linha|length}}</span> caracteres
-
-</div>
-
-<button class="copy-btn" onclick="copiarLinha()">Copiar Linha</button>
+<textarea readonly>{{nova_linha}}</textarea>
 
 </div>
 
 {% endif %}
+
+
+<!-- MODAL -->
+
+<div id="modal" class="modal">
+
+<div class="modal-content">
+
+<h3>Códigos disponíveis</h3>
+
+<div class="search-box">
+
+<input 
+type="text"
+id="pesquisa"
+placeholder="Pesquisar agente ou CNPJ...">
+
+<button type="button" onclick="filtrarTabela()" title="Buscar">
+🔍
+</button>
+
+</div>
+
+<div id="conteudo"></div>
+
+<br>
+
+<button onclick="fecharModal()">Fechar</button>
+
+</div>
 
 </div>
 
 
 <script>
 
-function copiarLinha(){
+let campoIndex = null
 
-let texto=document.getElementById("linhaFinal").innerText
+document.addEventListener("DOMContentLoaded", function(){
 
-navigator.clipboard.writeText(texto)
+const inputPesquisa = document.getElementById("pesquisa")
 
-alert("Linha copiada!")
+if(inputPesquisa){
+
+inputPesquisa.addEventListener("keypress", function(e){
+
+if(e.key === "Enter"){
+e.preventDefault()
+filtrarTabela()
+}
+
+})
+
+}
+
+})
+
+function verDetalhes(campo, index){
+
+campoIndex = index
+
+// abre o modal
+document.getElementById("modal").style.display = "flex"
+
+document.getElementById("pesquisa").value=""
+
+// lista de campos já implementados
+const camposImplementados = [
+"AGENTE REGULADO INFORMANTE",
+"CÓDIGO DO MODAL",
+"CÓDIGO DA OPERAÇÃO",
+"CÓDIGO DO PRODUTO OPERADO"
+]
+
+// se ainda não existe implementação
+if(!camposImplementados.includes(campo)){
+
+document.getElementById("conteudo").innerHTML = `
+<div style="text-align:center;padding:30px;color:#666">
+
+<div style="font-size:30px;margin-bottom:10px">
+🚧
+</div>
+
+<div style="font-size:16px;margin-bottom:6px">
+Detalhamento em desenvolvimento
+</div>
+
+<div style="font-size:13px;color:#888">
+O campo "<b>${campo}</b>" ainda não possui tabela de consulta.
+</div>
+
+</div>
+`
+
+return
+}
+
+// loading
+document.getElementById("conteudo").innerHTML = `
+<div style="text-align:center;padding:20px">
+
+<div style="
+width:35px;
+height:35px;
+border:4px solid #eee;
+border-top:4px solid #2f6db5;
+border-radius:50%;
+margin:auto;
+animation:spin 1s linear infinite"></div>
+
+<div style="margin-top:10px;color:#666">
+Carregando códigos...
+</div>
+
+</div>
+`
+
+fetch("/detalhes/" + encodeURIComponent(campo))
+
+.then(res=>res.json())
+
+.then(data=>{
+
+if(!data.dados || data.dados.length === 0){
+
+document.getElementById("conteudo").innerHTML = `
+<div style="text-align:center;padding:20px;color:#888">
+⚠️ Nenhum código encontrado
+</div>
+`
+
+return
+}
+
+let html = `
+<table id="tabelaCodigos">
+<thead>
+<tr>
+<th>Cod. Agente ANP</th>
+<th>Razão Social</th>
+<th>Raiz CNPJ</th>
+</tr>
+</thead>
+<tbody>
+`
+
+data.dados.forEach(item=>{
+
+html += `
+<tr onclick="selecionarCodigo('${item.codigo}')">
+<td>${item.codigo}</td>
+<td>${item.razao}</td>
+<td>${item.cnpj}</td>
+</tr>
+`
+
+})
+
+html += "</tbody></table>"
+
+document.getElementById("conteudo").innerHTML = html
+
+})
+
+.catch(()=>{
+
+document.getElementById("conteudo").innerHTML = `
+<div style="text-align:center;padding:20px;color:#888">
+Erro ao carregar dados
+</div>
+`
+
+})
+
+}
+function selecionarCodigo(codigo){
+
+let campo = document.querySelector(`[name="campo${campoIndex}"]`)
+
+if(campo){
+campo.value = codigo
+}
+
+fecharModal()
+
+}
+
+function fecharModal(){
+
+document.getElementById("modal").style.display="none"
+
+}
+
+function filtrarTabela(){
+
+let tabela = document.getElementById("tabelaCodigos")
+
+if(!tabela) return
+
+let termo = document.getElementById("pesquisa").value.toLowerCase()
+
+let linhas = tabela.querySelectorAll("tbody tr")
+
+let encontrou = false
+
+linhas.forEach(linha=>{
+
+let texto = linha.innerText.toLowerCase()
+
+if(texto.includes(termo)){
+linha.style.display=""
+encontrou = true
+}else{
+linha.style.display="none"
+}
+
+})
+
+// remove aviso antigo
+let avisoAntigo = document.getElementById("semResultadoBusca")
+
+if(avisoAntigo){
+avisoAntigo.remove()
+}
+
+if(!encontrou){
+
+let aviso = document.createElement("div")
+
+aviso.id = "semResultadoBusca"
+aviso.style.textAlign = "center"
+aviso.style.padding = "20px"
+aviso.style.color = "#888"
+
+aviso.innerHTML = "🔍 Nenhum resultado encontrado"
+
+document.getElementById("conteudo").appendChild(aviso)
+
+}
+
+}
+
+// fecha modal clicando fora
+window.onclick = function(event){
+
+let modal = document.getElementById("modal")
+
+if(event.target === modal){
+fecharModal()
+}
 
 }
 
 </script>
 
 </body>
-
 </html>
