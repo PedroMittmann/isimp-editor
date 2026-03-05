@@ -8,10 +8,17 @@
 <style>
     .header{
 display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:30px;
+padding-bottom:12px;
+border-bottom:1px solid #e2e6ec;
+}
+
+.header-left{
+display:flex;
 align-items:center;
 gap:18px;
-margin-bottom:30px;
-padding:10px 0;
 }
 
 .logo{
@@ -20,7 +27,14 @@ width:auto;
 object-fit:contain;
 cursor:pointer;
 transition:transform .35s ease;
-image-rendering:auto;
+}
+
+.header-right{
+font-size:13px;
+color:#6c757d;
+font-weight:500;
+letter-spacing:1px;
+text-transform:uppercase;
 }
 
 /* animação de clique */
@@ -190,14 +204,20 @@ height:80px;
 
 <div class="header">
 
-<img 
-src="/static/logo.png" 
-id="logoSistema"
-class="logo"
-onclick="animarLogo()"
->
+    <div class="header-left">
+        <img 
+        src="/static/logo.png"
+        id="logoSistema"
+        class="logo"
+        onclick="animarLogo()"
+        >
 
-<h1>Editor i-SIMP</h1>
+        <h1>Editor i-SIMP</h1>
+    </div>
+
+    <div class="header-right">
+        alphaexpress i-simp V: 2026.02.001 
+    </div>
 
 </div>
 
