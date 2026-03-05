@@ -6,6 +6,44 @@
 <title>Editor i-SIMP</title>
 
 <style>
+    .header{
+display:flex;
+align-items:center;
+gap:18px;
+margin-bottom:30px;
+padding:10px 0;
+}
+
+.logo{
+height:70px;
+width:auto;
+object-fit:contain;
+cursor:pointer;
+transition:transform .35s ease;
+image-rendering:auto;
+}
+
+/* animação de clique */
+
+.logo.animar{
+animation:logoSpin .6s ease;
+}
+
+@keyframes logoSpin{
+
+0%{
+transform:scale(1) rotate(0deg);
+}
+
+50%{
+transform:scale(1.15) rotate(180deg);
+}
+
+100%{
+transform:scale(1) rotate(360deg);
+}
+
+}
     @keyframes spin {
 0% { transform: rotate(0deg); }
 100% { transform: rotate(360deg); }
@@ -150,7 +188,18 @@ height:80px;
 
 <body>
 
+<div class="header">
+
+<img 
+src="/static/logo.png" 
+id="logoSistema"
+class="logo"
+onclick="animarLogo()"
+>
+
 <h1>Editor i-SIMP</h1>
+
+</div>
 
 <div class="container">
 
@@ -268,7 +317,7 @@ placeholder="Pesquisar agente ou CNPJ...">
 
 
 <script>
-
+let controllerBusca = null
 let campoIndex = null
 let campoAtual = null
 
@@ -280,8 +329,16 @@ const inputPesquisa = document.getElementById("pesquisa")
 
 if(inputPesquisa){
 
+let timerBusca
+
 inputPesquisa.addEventListener("input", function(){
+
+clearTimeout(timerBusca)
+
+timerBusca = setTimeout(()=>{
 filtrarTabela()
+},300)
+
 })
 
 }
@@ -297,41 +354,20 @@ campoAtual = campo
 document.getElementById("modal").style.display = "flex"
 document.getElementById("pesquisa").value = ""
 
-const camposImplementados = [
-"AGENTE REGULADO INFORMANTE",
-"CÓDIGO DO MODAL",
-"CÓDIGO DA OPERAÇÃO",
-"CÓDIGO DO PRODUTO OPERADO"
-]
-
-if(!camposImplementados.includes(campo)){
-
-document.getElementById("conteudo").innerHTML = `
-<div style="text-align:center;padding:30px;color:#666">
-
-<div style="font-size:30px;margin-bottom:10px">
-🚧
-</div>
-
-<div style="font-size:16px;margin-bottom:6px">
-Detalhamento em desenvolvimento
-</div>
-
-<div style="font-size:13px;color:#888">
-O campo "<b>${campo}</b>" ainda não possui tabela de consulta.
-</div>
-
-</div>
-`
-
-return
-}
 
 mostrarLoading()
 
 const inicio = Date.now()
 
-fetch("/detalhes/" + encodeURIComponent(campo))
+if(controllerBusca){
+controllerBusca.abort()
+}
+
+controllerBusca = new AbortController()
+
+fetch("/detalhes/" + encodeURIComponent(campoAtual), {
+signal: controllerBusca.signal
+})
 
 .then(res => res.json())
 
@@ -368,7 +404,9 @@ renderTabela(data.dados)
 mostrarErro()
 
 })
-
+setTimeout(()=>{
+document.getElementById("pesquisa").focus()
+},100)
 }
 
 function mostrarLoading(){
@@ -438,38 +476,36 @@ O campo "<b>${campo}</b>" ainda não possui tabela de consulta.
 
 function renderTabela(dados){
 
-let html = `
-<table id="tabelaCodigos">
-<thead>
-<tr>
-<th>Cod. Agente ANP</th>
-<th>Razão Social</th>
-<th>Raiz CNPJ</th>
-</tr>
-</thead>
-<tbody>
-`
+if(!dados || dados.length === 0){
+mostrarNenhumResultado()
+return
+}
 
-dados.forEach(item => {
+let colunas = Object.keys(dados[0])
 
-const codigo = String(item.codigo || "")
-const razao = String(item.razao || "")
-const cnpj = String(item.cnpj || "")
+let html = "<table id='tabelaCodigos'><thead><tr>"
 
-html += `
-<tr onclick="selecionarCodigo('${codigo.replace(/'/g,"")}')">
-<td>${codigo}</td>
-<td>${razao}</td>
-<td>${cnpj}</td>
-</tr>
-`
+colunas.forEach(c=>{
+html += `<th>${c.replace("_"," ").toUpperCase()}</th>`
+})
+
+html += "</tr></thead><tbody>"
+
+dados.forEach(item=>{
+
+let codigo = item.codigo || Object.values(item)[0] || ""
+html += `<tr onclick="selecionarCodigo('${codigo.replace(/'/g,"")}')">`
+colunas.forEach(c=>{
+html += `<td>${item[c] || ""}</td>`
+})
+
+html += "</tr>"
 
 })
 
 html += "</tbody></table>"
 
 document.getElementById("conteudo").innerHTML = html
-
 }
 
 function selecionarCodigo(codigo){
@@ -522,7 +558,11 @@ renderTabela(data.dados)
 
 })
 
-.catch(()=>{
+.catch(err => {
+
+if(err.name === "AbortError"){
+return
+}
 
 mostrarErro()
 
@@ -542,6 +582,25 @@ fecharModal()
 }
 
 }
+function animarLogo(){
+
+let logo = document.getElementById("logoSistema")
+
+logo.classList.remove("animar")
+
+setTimeout(()=>{
+logo.classList.add("animar")
+},10)
+
+}
+
+window.addEventListener("load", () => {
+
+setTimeout(()=>{
+animarLogo()
+},300)
+
+})
 
 </script>
 

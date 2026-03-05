@@ -45,12 +45,35 @@ layout = [
     {"nome": "RECIPIENTE GLP", "inicio": 195, "tamanho": 3},
     {"nome": "CHAVE DE ACESSO NF-E", "inicio": 198, "tamanho": 44},
 ]
+# ===============================
+# CONFIGURAÇÃO DAS TABELAS ANP
+# ===============================
+
+TABELAS = {
+
+    "AGENTE REGULADO INFORMANTE": {
+        "arquivo": "T001-Codigos_agentes_regulados.xlsx",
+        "usecols": "A:C",
+        "colunas": ["codigo","cnpj","razao"]
+    },
+
+    "CÓDIGO DA OPERAÇÃO": {
+    "arquivo": "T011-Codigos_de_operacoes.xlsx",
+    "usecols": "B,D,F",
+    "colunas": ["finalidade","especificacao","codigo"]
+}
+
+}
 
 # ===============================
 # FUNÇÃO PARA LER XLSX (ANP)
 # ===============================
 
-def carregar_codigos(arquivo, usecols=None):
+def carregar_codigos(config):
+
+    arquivo = config["arquivo"]
+    usecols = config["usecols"]
+    colunas = config["colunas"]
 
     cache_key = f"{arquivo}_{usecols}"
 
@@ -70,14 +93,13 @@ def carregar_codigos(arquivo, usecols=None):
             usecols=usecols
         )
 
-        df = df.iloc[:, 0:3].copy()
-        df.columns = ["codigo", "cnpj", "razao"]
+        df = df.iloc[:,0:3].copy()
+        df.columns = colunas
 
         df = df.fillna("")
 
-        df["codigo"] = df["codigo"].astype(str).str.replace(".0", "", regex=False)
-        df["cnpj"] = df["cnpj"].astype(str).str.replace(".0", "", regex=False)
-        df["razao"] = df["razao"].astype(str)
+        for c in df.columns:
+            df[c] = df[c].astype(str).str.replace(".0","",regex=False)
 
         dados = df.to_dict(orient="records")
 
@@ -86,6 +108,7 @@ def carregar_codigos(arquivo, usecols=None):
         return dados
 
     except Exception as e:
+
         print("Erro ao ler planilha:", e)
         return []
 
@@ -172,14 +195,7 @@ def index():
 @app.route("/detalhes/<campo>")
 def detalhes(campo):
 
-    mapa = {
-        "AGENTE REGULADO INFORMANTE": {
-            "arquivo": "T001-Codigos_agentes_regulados.xlsx",
-            "usecols": "A:C"
-        },
-    }
-
-    config = mapa.get(campo)
+    config = TABELAS.get(campo)
 
     if not config:
         return jsonify({
@@ -187,10 +203,7 @@ def detalhes(campo):
             "dados": []
         })
 
-    dados = carregar_codigos(
-        config["arquivo"],
-        config.get("usecols")
-    )
+    dados = carregar_codigos(config)
 
     return jsonify({
         "status": "ok",
@@ -205,29 +218,18 @@ def buscar():
     if len(termo) < 2:
         return jsonify({"dados":[]})
 
-
-    mapa = {
-        "AGENTE REGULADO INFORMANTE": {
-            "arquivo": "T001-Codigos_agentes_regulados.xlsx",
-            "usecols": "A:C"
-        }
-    }
-
-    config = mapa.get(campo)
+    config = TABELAS.get(campo)
 
     if not config:
         return jsonify({"dados":[]})
 
-    dados = carregar_codigos(
-        config["arquivo"],
-        config.get("usecols")
-    )
+    dados = carregar_codigos(config)
 
     resultados = []
 
     for item in dados:
 
-        texto = f"{item.get('codigo','')} {item.get('razao','')} {item.get('cnpj','')}".lower().strip()
+        texto = " ".join(str(v or "") for v in item.values()).lower()
 
         if termo in texto:
             resultados.append(item)
@@ -252,12 +254,8 @@ def preload_cache():
 
     print("Pré carregando tabelas ANP...")
 
-    arquivos = [
-        "T001-Codigos_agentes_regulados.xlsx"
-    ]
-
-    for arq in arquivos:
-        carregar_codigos(arq,"A:C")
+    for config in TABELAS.values():
+        carregar_codigos(config)
 
     print("Cache carregado:", len(CACHE_TABELAS), "tabelas")
 # ===============================
