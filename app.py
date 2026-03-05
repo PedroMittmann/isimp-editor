@@ -5,6 +5,12 @@ import os
 app = Flask(__name__)
 
 # ===============================
+# CACHE DE TABELAS (melhora performance no Render)
+# ===============================
+
+CACHE_TABELAS = {}
+
+# ===============================
 # LAYOUT DOS CAMPOS i-SIMP
 # ===============================
 
@@ -42,46 +48,52 @@ layout = [
 
 # ===============================
 # FUNÇÃO PARA LER XLSX (ANP)
-# - linha 1: cabeçalho geral
-# - linha 2: nomes das colunas
-# - linha 3+: dados
 # ===============================
 
-def carregar_codigos(arquivo: str, usecols: str | None = None):
+def carregar_codigos(arquivo, usecols=None):
+
+    cache_key = f"{arquivo}_{usecols}"
+
+    if cache_key in CACHE_TABELAS:
+        return CACHE_TABELAS[cache_key]
 
     caminho = os.path.join("codigos", arquivo)
 
     if not os.path.exists(caminho):
         return []
 
-    df = pd.read_excel(
-        caminho,
-        skiprows=1,          # pula SOMENTE a primeira linha
-        usecols=usecols      # ex.: "A:C" (opcional)
-    )
+    try:
 
-    # Para T001, queremos só as 3 primeiras colunas (A,B,C) já vêm via usecols,
-    # mas isso garante caso alguém passe None e o arquivo tenha mais colunas:
-    df = df.iloc[:, 0:3].copy()
+        df = pd.read_excel(
+            caminho,
+            skiprows=1,
+            usecols=usecols
+        )
 
-    # Normaliza nomes para o front-end (evita undefined)
-    df.columns = ["codigo", "cnpj", "razao"]
+        df = df.iloc[:, 0:3].copy()
+        df.columns = ["codigo", "cnpj", "razao"]
 
-    # Remove NaN
-    df = df.fillna("")
+        df = df.fillna("")
 
-    # Garante string (evita virar float/exponencial)
-    df["codigo"] = df["codigo"].astype(str).str.replace(".0", "", regex=False)
-    df["cnpj"] = df["cnpj"].astype(str).str.replace(".0", "", regex=False)
-    df["razao"] = df["razao"].astype(str)
+        df["codigo"] = df["codigo"].astype(str).str.replace(".0", "", regex=False)
+        df["cnpj"] = df["cnpj"].astype(str).str.replace(".0", "", regex=False)
+        df["razao"] = df["razao"].astype(str)
 
-    return df.to_dict(orient="records")
+        dados = df.to_dict(orient="records")
+
+        CACHE_TABELAS[cache_key] = dados
+
+        return dados
+
+    except Exception as e:
+        print("Erro ao ler planilha:", e)
+        return []
 
 # ===============================
 # QUEBRAR LINHA EM CAMPOS
 # ===============================
 
-def destrinchar(linha: str):
+def destrinchar(linha):
 
     resultado = []
 
@@ -115,7 +127,6 @@ def gerar_linha(campos):
         valor = campos.get(f"campo{i}", "")
         tamanho = campo["tamanho"]
 
-        # Mantém o tamanho correto
         valor = str(valor).ljust(tamanho, "0")[:tamanho]
 
         linha += valor
@@ -136,10 +147,12 @@ def index():
     if request.method == "POST":
 
         if "linha" in request.form:
+
             linha = request.form["linha"].strip()
             resultado = destrinchar(linha)
 
         else:
+
             nova_linha = gerar_linha(request.form)
             resultado = destrinchar(nova_linha)
             linha = nova_linha
@@ -159,33 +172,105 @@ def index():
 @app.route("/detalhes/<campo>")
 def detalhes(campo):
 
-    # Mapeia campos -> arquivos
     mapa = {
         "AGENTE REGULADO INFORMANTE": {
             "arquivo": "T001-Codigos_agentes_regulados.xlsx",
             "usecols": "A:C"
         },
-        # você pode ir adicionando outros aqui depois
     }
 
     config = mapa.get(campo)
 
     if not config:
-        return jsonify({"dados": []})
+        return jsonify({
+            "status": "dev",
+            "dados": []
+        })
 
     dados = carregar_codigos(
         config["arquivo"],
         config.get("usecols")
     )
 
-    return jsonify({"dados": dados})
+    return jsonify({
+        "status": "ok",
+        "dados": dados
+    })
+@app.route("/buscar")
+def buscar():
 
+    campo = request.args.get("campo")
+    termo = request.args.get("termo","").lower()
+
+    if len(termo) < 2:
+        return jsonify({"dados":[]})
+
+
+    mapa = {
+        "AGENTE REGULADO INFORMANTE": {
+            "arquivo": "T001-Codigos_agentes_regulados.xlsx",
+            "usecols": "A:C"
+        }
+    }
+
+    config = mapa.get(campo)
+
+    if not config:
+        return jsonify({"dados":[]})
+
+    dados = carregar_codigos(
+        config["arquivo"],
+        config.get("usecols")
+    )
+
+    resultados = []
+
+    for item in dados:
+
+        texto = f"{item.get('codigo','')} {item.get('razao','')} {item.get('cnpj','')}".lower().strip()
+
+        if termo in texto:
+            resultados.append(item)
+
+        if len(resultados) >= 20:
+            break
+
+    return jsonify({"dados":resultados})
+# ===============================
+# LIMPAR CACHE (opcional)
+# ===============================
+
+@app.route("/limpar-cache")
+def limpar_cache():
+
+    CACHE_TABELAS.clear()
+
+    return jsonify({
+        "status": "cache limpo"
+    })
+def preload_cache():
+
+    print("Pré carregando tabelas ANP...")
+
+    arquivos = [
+        "T001-Codigos_agentes_regulados.xlsx"
+    ]
+
+    for arq in arquivos:
+        carregar_codigos(arq,"A:C")
+
+    print("Cache carregado:", len(CACHE_TABELAS), "tabelas")
 # ===============================
 # START SERVER
 # ===============================
 
-import os
-
 if __name__ == "__main__":
+
+    preload_cache()
+
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+
+    app.run(
+        host="0.0.0.0",
+        port=port
+    )

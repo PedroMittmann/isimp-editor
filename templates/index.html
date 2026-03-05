@@ -6,6 +6,10 @@
 <title>Editor i-SIMP</title>
 
 <style>
+    @keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
 
 body{
 font-family:Segoe UI, Arial;
@@ -266,36 +270,33 @@ placeholder="Pesquisar agente ou CNPJ...">
 <script>
 
 let campoIndex = null
+let campoAtual = null
 
-document.addEventListener("DOMContentLoaded", function(){
+const TEMPO_LOADING = 300
+
+document.addEventListener("DOMContentLoaded", () => {
 
 const inputPesquisa = document.getElementById("pesquisa")
 
 if(inputPesquisa){
 
-inputPesquisa.addEventListener("keypress", function(e){
-
-if(e.key === "Enter"){
-e.preventDefault()
+inputPesquisa.addEventListener("input", function(){
 filtrarTabela()
-}
-
 })
 
 }
 
 })
+
 
 function verDetalhes(campo, index){
 
 campoIndex = index
+campoAtual = campo
 
-// abre o modal
 document.getElementById("modal").style.display = "flex"
+document.getElementById("pesquisa").value = ""
 
-document.getElementById("pesquisa").value=""
-
-// lista de campos já implementados
 const camposImplementados = [
 "AGENTE REGULADO INFORMANTE",
 "CÓDIGO DO MODAL",
@@ -303,7 +304,6 @@ const camposImplementados = [
 "CÓDIGO DO PRODUTO OPERADO"
 ]
 
-// se ainda não existe implementação
 if(!camposImplementados.includes(campo)){
 
 document.getElementById("conteudo").innerHTML = `
@@ -327,7 +327,52 @@ O campo "<b>${campo}</b>" ainda não possui tabela de consulta.
 return
 }
 
-// loading
+mostrarLoading()
+
+const inicio = Date.now()
+
+fetch("/detalhes/" + encodeURIComponent(campo))
+
+.then(res => res.json())
+
+.then(data => {
+
+const tempo = Date.now() - inicio
+
+const atraso = TEMPO_LOADING - tempo
+
+setTimeout(() => {
+
+if(data.status === "dev"){
+
+mostrarEmDesenvolvimento(campo)
+return
+
+}
+
+if(!data.dados || data.dados.length === 0){
+
+mostrarNenhumResultado()
+return
+
+}
+
+renderTabela(data.dados)
+
+}, atraso > 0 ? atraso : 0)
+
+})
+
+.catch(() => {
+
+mostrarErro()
+
+})
+
+}
+
+function mostrarLoading(){
+
 document.getElementById("conteudo").innerHTML = `
 <div style="text-align:center;padding:20px">
 
@@ -347,13 +392,9 @@ Carregando códigos...
 </div>
 `
 
-fetch("/detalhes/" + encodeURIComponent(campo))
+}
 
-.then(res=>res.json())
-
-.then(data=>{
-
-if(!data.dados || data.dados.length === 0){
+function mostrarNenhumResultado(){
 
 document.getElementById("conteudo").innerHTML = `
 <div style="text-align:center;padding:20px;color:#888">
@@ -361,8 +402,41 @@ document.getElementById("conteudo").innerHTML = `
 </div>
 `
 
-return
 }
+
+function mostrarErro(){
+
+document.getElementById("conteudo").innerHTML = `
+<div style="text-align:center;padding:20px;color:#888">
+Erro ao carregar dados
+</div>
+`
+
+}
+
+function mostrarEmDesenvolvimento(campo){
+
+document.getElementById("conteudo").innerHTML = `
+<div style="text-align:center;padding:30px;color:#666">
+
+<div style="font-size:30px;margin-bottom:10px">
+🚧
+</div>
+
+<div style="font-size:16px;margin-bottom:6px">
+Detalhamento em desenvolvimento
+</div>
+
+<div style="font-size:13px;color:#888">
+O campo "<b>${campo}</b>" ainda não possui tabela de consulta.
+</div>
+
+</div>
+`
+
+}
+
+function renderTabela(dados){
 
 let html = `
 <table id="tabelaCodigos">
@@ -376,13 +450,17 @@ let html = `
 <tbody>
 `
 
-data.dados.forEach(item=>{
+dados.forEach(item => {
+
+const codigo = String(item.codigo || "")
+const razao = String(item.razao || "")
+const cnpj = String(item.cnpj || "")
 
 html += `
-<tr onclick="selecionarCodigo('${item.codigo}')">
-<td>${item.codigo}</td>
-<td>${item.razao}</td>
-<td>${item.cnpj}</td>
+<tr onclick="selecionarCodigo('${codigo.replace(/'/g,"")}')">
+<td>${codigo}</td>
+<td>${razao}</td>
+<td>${cnpj}</td>
 </tr>
 `
 
@@ -392,19 +470,8 @@ html += "</tbody></table>"
 
 document.getElementById("conteudo").innerHTML = html
 
-})
-
-.catch(()=>{
-
-document.getElementById("conteudo").innerHTML = `
-<div style="text-align:center;padding:20px;color:#888">
-Erro ao carregar dados
-</div>
-`
-
-})
-
 }
+
 function selecionarCodigo(codigo){
 
 let campo = document.querySelector(`[name="campo${campoIndex}"]`)
@@ -419,60 +486,53 @@ fecharModal()
 
 function fecharModal(){
 
-document.getElementById("modal").style.display="none"
+document.getElementById("modal").style.display = "none"
 
 }
 
 function filtrarTabela(){
 
-let tabela = document.getElementById("tabelaCodigos")
-
-if(!tabela) return
-
-let termo = document.getElementById("pesquisa").value.toLowerCase()
-
-let linhas = tabela.querySelectorAll("tbody tr")
-
-let encontrou = false
-
-linhas.forEach(linha=>{
-
-let texto = linha.innerText.toLowerCase()
-
-if(texto.includes(termo)){
-linha.style.display=""
-encontrou = true
-}else{
-linha.style.display="none"
+if(!campoAtual){
+return
 }
+
+let termo = document.getElementById("pesquisa").value.trim()
+
+if(termo.length < 2){
+document.getElementById("conteudo").innerHTML=""
+return
+}
+
+mostrarLoading()
+
+fetch(`/buscar?campo=${encodeURIComponent(campoAtual)}&termo=${encodeURIComponent(termo)}`)
+
+.then(res=>res.json())
+
+.then(data=>{
+
+if(!data.dados || data.dados.length===0){
+
+mostrarNenhumResultado()
+return
+
+}
+
+renderTabela(data.dados)
 
 })
 
-// remove aviso antigo
-let avisoAntigo = document.getElementById("semResultadoBusca")
+.catch(()=>{
 
-if(avisoAntigo){
-avisoAntigo.remove()
-}
+mostrarErro()
 
-if(!encontrou){
-
-let aviso = document.createElement("div")
-
-aviso.id = "semResultadoBusca"
-aviso.style.textAlign = "center"
-aviso.style.padding = "20px"
-aviso.style.color = "#888"
-
-aviso.innerHTML = "🔍 Nenhum resultado encontrado"
-
-document.getElementById("conteudo").appendChild(aviso)
+})
 
 }
 
-}
 
-// fecha modal clicando fora
+
+
 window.onclick = function(event){
 
 let modal = document.getElementById("modal")
