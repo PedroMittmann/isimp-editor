@@ -6,7 +6,10 @@
 <title>Editor i-SIMP</title>
 
 <style>
-    .header{
+
+/* HEADER */
+
+.header{
 display:flex;
 justify-content:space-between;
 align-items:center;
@@ -37,31 +40,40 @@ letter-spacing:1px;
 text-transform:uppercase;
 }
 
-/* animação de clique */
-
 .logo.animar{
 animation:logoSpin .6s ease;
 }
 
 @keyframes logoSpin{
 
-0%{
-transform:scale(1) rotate(0deg);
-}
-
-50%{
-transform:scale(1.15) rotate(180deg);
-}
-
-100%{
-transform:scale(1) rotate(360deg);
-}
+0%{transform:scale(1) rotate(0deg);}
+50%{transform:scale(1.15) rotate(180deg);}
+100%{transform:scale(1) rotate(360deg);}
 
 }
-    @keyframes spin {
+
+/* VERIFICADO */
+
+.check-dev{
+display:inline-flex;
+align-items:center;
+margin-left:6px;
+}
+
+.check-dev svg{
+width:16px;
+height:16px;
+fill:#1877F2;
+}
+
+/* LOADING */
+
+@keyframes spin {
 0% { transform: rotate(0deg); }
 100% { transform: rotate(360deg); }
 }
+
+/* BODY */
 
 body{
 font-family:Segoe UI, Arial;
@@ -83,6 +95,8 @@ border:1px solid #ccc;
 padding:10px;
 font-family:monospace;
 }
+
+/* TABLE */
 
 table{
 width:100%;
@@ -109,6 +123,8 @@ border-bottom:1px solid #eee;
 tr:nth-child(even){
 background:#f8f9fb;
 }
+
+/* FORM */
 
 input{
 width:100%;
@@ -138,6 +154,8 @@ border-radius:10px;
 box-shadow:0 2px 8px rgba(0,0,0,0.08);
 margin-bottom:20px;
 }
+
+/* MODAL */
 
 .modal{
 position:fixed;
@@ -183,15 +201,6 @@ margin-bottom:12px;
 flex:1;
 }
 
-h3{
-margin-top:0;
-font-weight:600;
-}
-
-.result-box{
-margin-top:20px;
-}
-
 .result-box textarea{
 height:80px;
 }
@@ -204,22 +213,25 @@ height:80px;
 
 <div class="header">
 
-    <div class="header-left">
-        <img 
-        src="/static/logo.png"
-        id="logoSistema"
-        class="logo"
-        onclick="animarLogo()"
-        >
+<div class="header-left">
 
-        <h1>Editor i-SIMP</h1>
-    </div>
+<img 
+src="/static/logo.png"
+id="logoSistema"
+class="logo"
+onclick="animarLogo()"
+>
 
-    <div class="header-right">
-        alphaexpress i-simp V: 2026.02.001 
-    </div>
+<h1>Editor i-SIMP</h1>
 
 </div>
+
+<div class="header-right">
+alphaexpress i-simp V: 2026.02.001
+</div>
+
+</div>
+
 
 <div class="container">
 
@@ -256,7 +268,7 @@ height:80px;
 
 <tr>
 
-<td>{{item.campo}}</td>
+<td class="nomeCampo">{{item.campo}}</td>
 
 <td>{{item.inicio}} - {{item.fim}}</td>
 
@@ -304,7 +316,6 @@ Detalhes
 {% endif %}
 
 
-<!-- MODAL -->
 
 <div id="modal" class="modal">
 
@@ -317,11 +328,9 @@ Detalhes
 <input 
 type="text"
 id="pesquisa"
-placeholder="Pesquisar agente ou CNPJ...">
+placeholder="Pesquisar código ou descrição...">
 
-<button type="button" onclick="filtrarTabela()" title="Buscar">
-🔍
-</button>
+<button type="button" onclick="filtrarTabela()">🔍</button>
 
 </div>
 
@@ -337,101 +346,101 @@ placeholder="Pesquisar agente ou CNPJ...">
 
 
 <script>
+
+/* CAMPOS COM PESQUISA */
+
+const camposComPesquisa = [
+"AGENTE REGULADO INFORMANTE",
+"CÓDIGO DA OPERAÇÃO",
+"CÓDIGO DO MODAL",
+"CÓDIGO DO PRODUTO OPERADO"
+]
+
+function campoComCheck(nome){
+
+if(camposComPesquisa.includes(nome)){
+
+return `
+<span class="check-dev" title="Consulta disponível">
+<svg viewBox="0 0 24 24">
+<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 
+10-4.48 10-10S17.52 2 12 2zm-1.2 14.2l-3.5-3.5 
+1.4-1.4 2.1 2.1 5.1-5.1 1.4 1.4-6.5 6.5z"/>
+</svg>
+</span>
+`
+
+}
+
+return ""
+
+}
+
+/* ADICIONAR CHECK */
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+document.querySelectorAll(".nomeCampo").forEach(el=>{
+
+let nome = el.innerText.trim()
+
+el.innerHTML = nome + campoComCheck(nome)
+
+})
+
+})
+
+
+/* BUSCA */
+
 let controllerBusca = null
 let campoIndex = null
 let campoAtual = null
 
 const TEMPO_LOADING = 300
 
-document.addEventListener("DOMContentLoaded", () => {
+function verDetalhes(campo,index){
 
-const inputPesquisa = document.getElementById("pesquisa")
+campoIndex=index
+campoAtual=campo
 
-if(inputPesquisa){
-
-let timerBusca
-
-inputPesquisa.addEventListener("input", function(){
-
-clearTimeout(timerBusca)
-
-timerBusca = setTimeout(()=>{
-filtrarTabela()
-},300)
-
-})
-
-}
-
-})
-
-
-function verDetalhes(campo, index){
-
-campoIndex = index
-campoAtual = campo
-
-document.getElementById("modal").style.display = "flex"
-document.getElementById("pesquisa").value = ""
-
+document.getElementById("modal").style.display="flex"
+document.getElementById("pesquisa").value=""
 
 mostrarLoading()
 
-const inicio = Date.now()
+fetch("/detalhes/"+encodeURIComponent(campoAtual))
 
-if(controllerBusca){
-controllerBusca.abort()
-}
+.then(res=>res.json())
 
-controllerBusca = new AbortController()
+.then(data=>{
 
-fetch("/detalhes/" + encodeURIComponent(campoAtual), {
-signal: controllerBusca.signal
-})
-
-.then(res => res.json())
-
-.then(data => {
-
-const tempo = Date.now() - inicio
-
-const atraso = TEMPO_LOADING - tempo
-
-setTimeout(() => {
-
-if(data.status === "dev"){
-
+if(data.status==="dev"){
 mostrarEmDesenvolvimento(campo)
 return
-
 }
 
-if(!data.dados || data.dados.length === 0){
-
+if(!data.dados||data.dados.length===0){
 mostrarNenhumResultado()
 return
-
 }
 
 renderTabela(data.dados)
 
-}, atraso > 0 ? atraso : 0)
-
 })
 
-.catch(() => {
+.catch(()=>mostrarErro())
 
-mostrarErro()
-
-})
 setTimeout(()=>{
 document.getElementById("pesquisa").focus()
 },100)
+
 }
+
 
 function mostrarLoading(){
 
-document.getElementById("conteudo").innerHTML = `
+document.getElementById("conteudo").innerHTML=`
 <div style="text-align:center;padding:20px">
 
 <div style="
@@ -447,39 +456,31 @@ animation:spin 1s linear infinite"></div>
 Carregando códigos...
 </div>
 
-</div>
-`
-
+</div>`
 }
 
 function mostrarNenhumResultado(){
 
-document.getElementById("conteudo").innerHTML = `
+document.getElementById("conteudo").innerHTML=`
 <div style="text-align:center;padding:20px;color:#888">
 ⚠️ Nenhum código encontrado
-</div>
-`
-
+</div>`
 }
 
 function mostrarErro(){
 
-document.getElementById("conteudo").innerHTML = `
+document.getElementById("conteudo").innerHTML=`
 <div style="text-align:center;padding:20px;color:#888">
 Erro ao carregar dados
-</div>
-`
-
+</div>`
 }
 
 function mostrarEmDesenvolvimento(campo){
 
-document.getElementById("conteudo").innerHTML = `
+document.getElementById("conteudo").innerHTML=`
 <div style="text-align:center;padding:30px;color:#666">
 
-<div style="font-size:30px;margin-bottom:10px">
-🚧
-</div>
+<div style="font-size:30px;margin-bottom:10px">🚧</div>
 
 <div style="font-size:16px;margin-bottom:6px">
 Detalhamento em desenvolvimento
@@ -489,72 +490,68 @@ Detalhamento em desenvolvimento
 O campo "<b>${campo}</b>" ainda não possui tabela de consulta.
 </div>
 
-</div>
-`
-
+</div>`
 }
+
 
 function renderTabela(dados){
 
-if(!dados || dados.length === 0){
-mostrarNenhumResultado()
-return
-}
+let colunas=Object.keys(dados[0])
 
-let colunas = Object.keys(dados[0])
-
-let html = "<table id='tabelaCodigos'><thead><tr>"
+let html="<table><thead><tr>"
 
 colunas.forEach(c=>{
-html += `<th>${c.replace("_"," ").toUpperCase()}</th>`
+html+=`<th>${c.replace("_"," ").toUpperCase()}</th>`
 })
 
-html += "</tr></thead><tbody>"
+html+="</tr></thead><tbody>"
 
 dados.forEach(item=>{
 
-let codigo = item.codigo || Object.values(item)[0] || ""
-html += `<tr onclick="selecionarCodigo('${codigo.replace(/'/g,"")}')">`
+let codigo=item.codigo||Object.values(item)[0]||""
+
+html+=`<tr onclick="selecionarCodigo('${codigo}')">`
+
 colunas.forEach(c=>{
-html += `<td>${item[c] || ""}</td>`
+html+=`<td>${item[c]||""}</td>`
 })
 
-html += "</tr>"
+html+="</tr>"
 
 })
 
-html += "</tbody></table>"
+html+="</tbody></table>"
 
-document.getElementById("conteudo").innerHTML = html
+document.getElementById("conteudo").innerHTML=html
+
 }
+
 
 function selecionarCodigo(codigo){
 
-let campo = document.querySelector(`[name="campo${campoIndex}"]`)
+let campo=document.querySelector(`[name="campo${campoIndex}"]`)
 
 if(campo){
-campo.value = codigo
+campo.value=codigo
 }
 
 fecharModal()
 
 }
 
+
 function fecharModal(){
-
-document.getElementById("modal").style.display = "none"
-
+document.getElementById("modal").style.display="none"
 }
+
 
 function filtrarTabela(){
 
-if(!campoAtual){
-return
-}
+if(!campoAtual)return
 
-let termo = document.getElementById("pesquisa").value.trim()
+let termo=document.getElementById("pesquisa").value.trim()
 
-if(termo.length < 2){
+if(termo.length<2){
 document.getElementById("conteudo").innerHTML=""
 return
 }
@@ -567,44 +564,25 @@ fetch(`/buscar?campo=${encodeURIComponent(campoAtual)}&termo=${encodeURIComponen
 
 .then(data=>{
 
-if(!data.dados || data.dados.length===0){
-
+if(!data.dados||data.dados.length===0){
 mostrarNenhumResultado()
 return
-
 }
 
 renderTabela(data.dados)
 
 })
 
-.catch(err => {
-
-if(err.name === "AbortError"){
-return
-}
-
-mostrarErro()
-
-})
+.catch(()=>mostrarErro())
 
 }
 
 
+/* LOGO */
 
-
-window.onclick = function(event){
-
-let modal = document.getElementById("modal")
-
-if(event.target === modal){
-fecharModal()
-}
-
-}
 function animarLogo(){
 
-let logo = document.getElementById("logoSistema")
+let logo=document.getElementById("logoSistema")
 
 logo.classList.remove("animar")
 
@@ -614,7 +592,7 @@ logo.classList.add("animar")
 
 }
 
-window.addEventListener("load", () => {
+window.addEventListener("load",()=>{
 
 setTimeout(()=>{
 animarLogo()
