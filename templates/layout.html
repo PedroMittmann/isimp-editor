@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="PCM Tech Platform - Dashboard modular para gestão empresarial e análises i-SIMP.">
+
+    <title>PCM Tech Platforma</title>
+
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <script defer src="{{ url_for('static', filename='app.js') }}"></script>
+</head>
+<body>
+
+<div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar" aria-label="Menu lateral principal">
+
+        <div class="logo-container">
+            <img
+                src="{{ url_for('static', filename='logo.svg') }}"
+                class="sidebar-logo"
+                alt="PCM Tech"
+            >
+        </div>
+
+        <nav class="menu" aria-label="Navegação principal">
+
+            <a
+                class="menu-item active"
+                data-module-link="/dashboard-content"
+                onclick="abrirModulo('/dashboard-content')"
+                role="button"
+                tabindex="0"
+                aria-label="Abrir dashboard"
+            >
+                <span class="icon">🏠</span>
+                <span class="text">Dashboard</span>
+            </a>
+
+            <a
+                class="menu-item"
+                data-module-link="/isimp"
+                onclick="abrirModulo('/isimp')"
+                role="button"
+                tabindex="0"
+                aria-label="Abrir módulo Análises i-SIMP"
+            >
+                <span class="icon">📊</span>
+                <span class="text">Análises i-SIMP</span>
+            </a>
+
+            <a
+                class="menu-item"
+                data-module-link="/crm"
+                onclick="abrirModulo('/crm')"
+                role="button"
+                tabindex="0"
+                aria-label="Abrir módulo CRM Clientes"
+            >
+                <span class="icon">👥</span>
+                <span class="text">CRM Clientes</span>
+            </a>
+
+            <a
+                class="menu-item"
+                data-module-link="/pdv"
+                onclick="abrirModulo('/pdv')"
+                role="button"
+                tabindex="0"
+                aria-label="Abrir módulo PDV"
+            >
+                <span class="icon">💳</span>
+                <span class="text">PDV</span>
+            </a>
+
+            <a
+                class="menu-item"
+                data-module-link="/produtos"
+                onclick="abrirModulo('/produtos')"
+                role="button"
+                tabindex="0"
+                aria-label="Abrir módulo Produtos"
+            >
+                <span class="icon">📦</span>
+                <span class="text">Produtos</span>
+            </a>
+
+            <a
+                class="menu-item"
+                data-module-link="/estoque"
+                onclick="abrirModulo('/estoque')"
+                role="button"
+                tabindex="0"
+                aria-label="Abrir módulo Estoque"
+            >
+                <span class="icon">📚</span>
+                <span class="text">Estoque</span>
+            </a>
+
+        </nav>
+
+    </aside>
+
+
+    <!-- MAIN -->
+    <main class="main">
+
+        <!-- TOPBAR -->
+        <header class="topbar">
+
+            <div class="top-left">
+
+                <button
+                    class="toggle"
+                    type="button"
+                    onclick="toggleSidebar()"
+                    aria-label="Expandir ou recolher menu lateral"
+                    title="Expandir / recolher menu"
+                >
+                    ☰
+                </button>
+
+                <h1 class="page-title">
+                    PCM Tech Plataforma
+                </h1>
+
+            </div>
+
+            <div class="top-right">
+
+                <button
+                    class="theme-btn"
+                    type="button"
+                    onclick="toggleTheme()"
+                    aria-label="Alternar tema claro e escuro"
+                    title="Alternar tema"
+                >
+                    🌙 / ☀️
+                </button>
+
+                <div class="avatar" title="Administrador">
+                    A
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- ÁREA DINÂMICA -->
+        <section id="app-content" aria-live="polite">
+
+            {% include "dashboard.html" %}
+
+        </section>
+
+    </main>
+
+</div>
+
+</body>
+</html>

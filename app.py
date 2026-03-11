@@ -5,7 +5,7 @@ import os
 app = Flask(__name__)
 
 # ===============================
-# CACHE DE TABELAS (melhora performance no Render)
+# CACHE DE TABELAS
 # ===============================
 
 CACHE_TABELAS = {}
@@ -14,7 +14,7 @@ CACHE_TABELAS = {}
 # LAYOUT DOS CAMPOS i-SIMP
 # ===============================
 
-layout = [
+LAYOUT_ISIMP = [
     {"nome": "CONTADOR SEQUENCIAL", "inicio": 0, "tamanho": 10},
     {"nome": "AGENTE REGULADO INFORMANTE", "inicio": 10, "tamanho": 10},
     {"nome": "MÊS DE REFERÊNCIA (MMAAAA)", "inicio": 20, "tamanho": 6},
@@ -45,32 +45,29 @@ layout = [
     {"nome": "RECIPIENTE GLP", "inicio": 195, "tamanho": 3},
     {"nome": "CHAVE DE ACESSO NF-E", "inicio": 198, "tamanho": 44},
 ]
+
 # ===============================
 # CONFIGURAÇÃO DAS TABELAS ANP
 # ===============================
 
 TABELAS = {
-
     "AGENTE REGULADO INFORMANTE": {
         "arquivo": "T001-Codigos_agentes_regulados.xlsx",
         "usecols": "A:C",
-        "colunas": ["codigo","cnpj","razao"]
+        "colunas": ["codigo", "cnpj", "razao"],
     },
-
     "CÓDIGO DA OPERAÇÃO": {
-    "arquivo": "T011-Codigos_de_operacoes.xlsx",
-    "usecols": "B,D,F",
-    "colunas": ["finalidade","especificacao","codigo"]
-}
-
+        "arquivo": "T011-Codigos_de_operacoes.xlsx",
+        "usecols": "B,D,F",
+        "colunas": ["finalidade", "especificacao", "codigo"],
+    },
 }
 
 # ===============================
-# FUNÇÃO PARA LER XLSX (ANP)
+# FUNÇÕES AUXILIARES
 # ===============================
 
 def carregar_codigos(config):
-
     arquivo = config["arquivo"]
     usecols = config["usecols"]
     colunas = config["colunas"]
@@ -86,45 +83,35 @@ def carregar_codigos(config):
         return []
 
     try:
-
         df = pd.read_excel(
             caminho,
             skiprows=1,
             usecols=usecols
         )
 
-        df = df.iloc[:,0:3].copy()
+        df = df.iloc[:, 0:3].copy()
         df.columns = colunas
-
         df = df.fillna("")
 
-        for c in df.columns:
-            df[c] = df[c].astype(str).str.replace(".0","",regex=False)
+        for coluna in df.columns:
+            df[coluna] = df[coluna].astype(str).str.replace(".0", "", regex=False)
 
         dados = df.to_dict(orient="records")
-
         CACHE_TABELAS[cache_key] = dados
 
         return dados
 
     except Exception as e:
-
-        print("Erro ao ler planilha:", e)
+        print(f"Erro ao ler planilha {arquivo}: {e}")
         return []
 
-# ===============================
-# QUEBRAR LINHA EM CAMPOS
-# ===============================
 
-def destrinchar(linha):
-
+def destrinchar_linha(linha):
     resultado = []
 
-    for campo in layout:
-
+    for campo in LAYOUT_ISIMP:
         inicio = campo["inicio"]
         fim = inicio + campo["tamanho"]
-
         valor = linha[inicio:fim]
 
         resultado.append({
@@ -137,64 +124,143 @@ def destrinchar(linha):
 
     return resultado
 
-# ===============================
-# GERAR NOVA LINHA
-# ===============================
 
 def gerar_linha(campos):
-
     linha = ""
 
-    for i, campo in enumerate(layout):
-
+    for i, campo in enumerate(LAYOUT_ISIMP):
         valor = campos.get(f"campo{i}", "")
         tamanho = campo["tamanho"]
 
         valor = str(valor).ljust(tamanho, "0")[:tamanho]
-
         linha += valor
 
     return linha
 
+
+def preload_cache():
+    print("Pré-carregando tabelas ANP...")
+
+    for config in TABELAS.values():
+        carregar_codigos(config)
+
+    print(f"Cache carregado: {len(CACHE_TABELAS)} tabela(s).")
+
+
+def render_coming_soon(titulo, descricao, cor, itens):
+    return render_template(
+        "modulos/coming_soon.html",
+        titulo=titulo,
+        descricao=descricao,
+        cor=cor,
+        itens=itens
+    )
+
 # ===============================
-# PÁGINA PRINCIPAL
+# ROTAS PRINCIPAIS
 # ===============================
 
-@app.route("/", methods=["GET", "POST"])
-def index():
+@app.route("/")
+def home():
+    return render_template("layout.html")
 
+
+@app.route("/dashboard-content")
+def dashboard_content():
+    return render_template("dashboard.html")
+
+# ===============================
+# MÓDULOS
+# ===============================
+
+@app.route("/isimp", methods=["GET", "POST"])
+def modulo_isimp():
     resultado = []
     linha = ""
     nova_linha = None
 
     if request.method == "POST":
-
         if "linha" in request.form:
-
             linha = request.form["linha"].strip()
-            resultado = destrinchar(linha)
-
+            resultado = destrinchar_linha(linha)
         else:
-
             nova_linha = gerar_linha(request.form)
-            resultado = destrinchar(nova_linha)
+            resultado = destrinchar_linha(nova_linha)
             linha = nova_linha
 
     return render_template(
-        "index.html",
+        "modulos/isimp.html",
         resultado=resultado,
         linha=linha,
-        nova_linha=nova_linha,
-        layout=layout
+        nova_linha=nova_linha
+    )
+
+
+@app.route("/crm")
+def crm():
+    return render_coming_soon(
+        titulo="CRM Clientes",
+        descricao="Gestão de clientes, funil comercial, histórico de contato e oportunidades.",
+        cor="#7C3AED",
+        itens=[
+            "Cadastro e segmentação de clientes",
+            "Histórico de atendimento e follow-up",
+            "Pipeline comercial e oportunidades",
+            "Integração com produtos e pedidos"
+        ]
+    )
+
+
+@app.route("/produtos")
+def produtos():
+    return render_coming_soon(
+        titulo="Produtos",
+        descricao="Cadastro, categorização, preços, variações e integração com estoque.",
+        cor="#D97706",
+        itens=[
+            "Cadastro completo de produtos",
+            "Categorias, marcas e atributos",
+            "Política de preços e tabelas",
+            "Integração com estoque e PDV"
+        ]
+    )
+
+
+@app.route("/pdv")
+def pdv():
+    return render_coming_soon(
+        titulo="Ponto de Venda",
+        descricao="Tela de compra e venda integrada ao sistema.",
+        cor="#0EA5E9",
+        itens=[
+            "Abertura e fechamento de caixa",
+            "Venda rápida e multi-itens",
+            "Integração com estoque",
+            "Emissão de comprovantes"
+        ]
+    )
+
+
+@app.route("/estoque")
+def estoque():
+    return render_coming_soon(
+        titulo="Gestão de Estoque",
+        descricao="Controle de entradas, saídas, movimentações e inventário.",
+        cor="#10B981",
+        itens=[
+            "Movimentações de entrada e saída",
+            "Inventário e ajuste de saldo",
+            "Reserva e baixa automática",
+            "Integração com produtos e PDV"
+        ]
     )
 
 # ===============================
-# DETALHES DOS CÓDIGOS
+# API DE CONSULTA ANP
 # ===============================
 
 @app.route("/detalhes/<campo>")
 def detalhes(campo):
-
     config = TABELAS.get(campo)
 
     if not config:
@@ -209,26 +275,26 @@ def detalhes(campo):
         "status": "ok",
         "dados": dados
     })
+
+
 @app.route("/buscar")
 def buscar():
-
-    campo = request.args.get("campo")
-    termo = request.args.get("termo","").lower()
+    campo = request.args.get("campo", "")
+    termo = request.args.get("termo", "").strip().lower()
 
     if len(termo) < 2:
-        return jsonify({"dados":[]})
+        return jsonify({"dados": []})
 
     config = TABELAS.get(campo)
 
     if not config:
-        return jsonify({"dados":[]})
+        return jsonify({"dados": []})
 
     dados = carregar_codigos(config)
 
     resultados = []
 
     for item in dados:
-
         texto = " ".join(str(v or "") for v in item.values()).lower()
 
         if termo in texto:
@@ -237,38 +303,28 @@ def buscar():
         if len(resultados) >= 20:
             break
 
-    return jsonify({"dados":resultados})
+    return jsonify({"dados": resultados})
+
 # ===============================
-# LIMPAR CACHE (opcional)
+# UTILITÁRIOS
 # ===============================
 
 @app.route("/limpar-cache")
 def limpar_cache():
-
     CACHE_TABELAS.clear()
+    return jsonify({"status": "cache limpo"})
 
-    return jsonify({
-        "status": "cache limpo"
-    })
-def preload_cache():
-
-    print("Pré carregando tabelas ANP...")
-
-    for config in TABELAS.values():
-        carregar_codigos(config)
-
-    print("Cache carregado:", len(CACHE_TABELAS), "tabelas")
 # ===============================
 # START SERVER
 # ===============================
 
 if __name__ == "__main__":
-
     preload_cache()
 
     port = int(os.environ.get("PORT", 10000))
 
     app.run(
         host="0.0.0.0",
-        port=port
+        port=port,
+        debug=False
     )

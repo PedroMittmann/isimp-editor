@@ -1,0 +1,137 @@
+<div class="module-container">
+
+    <div class="module-header">
+        <div>
+            <div class="page-eyebrow">MÓDULO</div>
+            <h2>Editor i-SIMP</h2>
+        </div>
+
+        <div class="module-version">
+            PCM-Tech i-SIMP • v2026.03.005
+        </div>
+    </div>
+
+
+    <div class="container">
+
+        <form method="POST" action="/isimp" data-ajax-module-form>
+            <textarea
+                name="linha"
+                placeholder="Cole aqui a linha i-SIMP para análise..."
+                aria-label="Linha i-SIMP"
+            >{{ linha or '' }}</textarea>
+
+            <br><br>
+
+            <button type="submit">
+                Analisar Linha
+            </button>
+        </form>
+
+    </div>
+
+
+    {% if resultado %}
+
+    <div class="container">
+
+        <form method="POST" action="/isimp" data-ajax-module-form>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Campo</th>
+                        <th>Posição</th>
+                        <th>Tamanho</th>
+                        <th>Valor Editável</th>
+                        <th>Detalhes</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in resultado %}
+                    <tr>
+                        <td class="nomeCampo">{{ item.campo }}</td>
+                        <td>{{ item.inicio }} - {{ item.fim }}</td>
+                        <td>{{ item.tamanho }}</td>
+                        <td>
+                            <input
+                                type="text"
+                                name="campo{{ loop.index0 }}"
+                                value="{{ item.valor }}"
+                                aria-label="Valor editável de {{ item.campo }}"
+                            >
+                        </td>
+                        <td>
+                            <button
+                                type="button"
+                                onclick="verDetalhes('{{ item.campo }}', {{ loop.index0 }})"
+                            >
+                                Detalhes
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <br>
+
+            <button type="submit">
+                Gerar Nova Linha
+            </button>
+
+        </form>
+
+    </div>
+
+    {% endif %}
+
+
+    {% if nova_linha %}
+
+    <div class="container result-box">
+
+        <h3>Nova linha gerada</h3>
+
+        <textarea readonly aria-label="Nova linha gerada">{{ nova_linha }}</textarea>
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- MODAL DE CONSULTA -->
+
+    <div id="modal" class="modal">
+
+        <div class="modal-content">
+
+            <h3>Códigos disponíveis</h3>
+
+            <div class="search-box">
+                <input
+                    type="text"
+                    id="pesquisa"
+                    placeholder="Pesquisar código ou descrição..."
+                    aria-label="Pesquisar código ou descrição"
+                >
+
+                <button type="button" onclick="filtrarTabela()">
+                    🔍
+                </button>
+            </div>
+
+            <div id="conteudo"></div>
+
+            <br>
+
+            <button type="button" onclick="fecharModal()">
+                Fechar
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
